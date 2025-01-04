@@ -57,8 +57,8 @@ This project is meant to be used as whatsapp cloud api webhook receiver. This pr
     - `WEBHOOK_VERIFY_TOKEN` - Whatsapp webhook verify token you generated in prerequisites
     - `WHATSAPP_ACCESS_TOKEN` - Whatsapp cloud API permanent token
     - `FACEBOOK_APP_SECRET` - Facebook app secret
-    - `NEXT_PUBLIC_SUPABASE_URL` - Supabase project URL
-    - `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Supabase anon key
+    - `SUPABASE_URL` - Supabase project URL
+    - `SUPABASE_ANON_KEY` - Supabase anon key
     - `SUPABASE_SERVICE_ROLE` - Supabase service role
     - `WHATSAPP_API_PHONE_NUMBER_ID` - Phone number ID
     - `WHATSAPP_BUSINESS_ACCOUNT_ID` - WhatsApp Business Account ID

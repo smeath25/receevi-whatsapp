@@ -3,7 +3,6 @@
 import { Dispatch, SetStateAction, useEffect, useRef, useState } from "react"
 import { DBTables } from "@/lib/enums/Tables"
 import { MessageJson, TemplateMessage, TextMessage } from "@/types/Message"
-import { createClient } from "@/utils/supabase-browser"
 import ReceivedImageMessageUI from "./ReceivedImageMessageUI"
 import ReceivedTextMessageUI from "./ReceivedTextMessageUI"
 import TailWrapper from "./TailWrapper"
@@ -11,6 +10,7 @@ import ReceivedTemplateMessageUI from "./ReceivedTemplateMessageUI"
 import { markAsRead } from "./markAsRead"
 import ReceivedVideoMessageUI from "./ReceivedVideoMessageUI"
 import ReceivedDocumentMessageUI from "./ReceivedDocumentMessageUI"
+import { useSupabase } from "@/components/supabase-provider"
 
 type UIMessageModel = DBMessage & {
     msgDate: string
@@ -27,7 +27,7 @@ function addDateToMessages(withoutDateArray: DBMessage[]): UIMessageModel[] {
 }
 
 export default function MessageListClient({ from }: { from: string }) {
-    const [supabase] = useState(() => createClient())
+    const { supabase } = useSupabase()
     const [stateMessages, setMessages] = useState<UIMessageModel[]>(addDateToMessages([]))
     const [additionalMessagesLoading, setAdditionalMessagesLoading] = useState<boolean>(false)
     const [noMoreMessages, setNoMoreMessages] = useState<boolean>(false)

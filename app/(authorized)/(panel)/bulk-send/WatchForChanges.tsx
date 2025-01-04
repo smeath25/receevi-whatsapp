@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@/utils/supabase-browser";
+import { useSupabase } from "@/components/supabase-provider";
 import { BroadcastFromDB } from "@/lib/repositories/broadcast/BroadcastRepository";
 import { useRouter } from "next/navigation";
 import { useDebounce } from "@/utils/useDebounce";
 
 export default function WatchForChanges({ page }: { page: number }) {
-    const [supabase] = useState(() => createClient())
+    const { supabase } = useSupabase()
     const router = useRouter();
     const refreshRouterDebounce = useDebounce(() => {
         router.refresh()

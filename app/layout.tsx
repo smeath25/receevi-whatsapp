@@ -30,7 +30,7 @@ export default async function RootLayout({
       </head>
       <body>
         <NextTopLoader color="#000" />
-        <SupabaseProvider>
+        <SupabaseProvider supabaseUrl={process.env.SUPABASE_URL} supabaseAnonKey={process.env.SUPABASE_ANON_KEY}>
           <SupabaseUserProvider user={session?.user}>
             {children}
           </SupabaseUserProvider>

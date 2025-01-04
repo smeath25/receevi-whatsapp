@@ -5,7 +5,7 @@ import ChatHeader from "./ChatHeader";
 import MessageListClient from "./MessageListClient";
 import SendMessageWrapper from "./SendMessageWrapper";
 import { useCallback, useEffect, useState } from "react";
-import { createClient } from "@/utils/supabase-browser";
+import { useSupabase } from "@/components/supabase-provider";
 import ContactBrowserFactory from "@/lib/repositories/contacts/ContactBrowserFactory";
 import { Contact } from "@/types/contact";
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,7 @@ export default function ContactChat({ params }: { params: { wa_id: string } }) {
     const [isChatWindowOpen, setChatWindowOpen] = useState<boolean | undefined>()
     const [lastMessageReceivedAt, setLastMessageReceivedAt] = useState<Date | undefined>()
     const [contactRepository] = useState(() => ContactBrowserFactory.getInstance())
-    const [supabase] = useState(() => createClient())
+    const { supabase } = useSupabase()
     const [messageTemplateSending, setMessageTemplateSending] = useState<boolean>(false);
     const [contact, setContact] = useState<Contact | undefined>();
     const setCurrentContact = useCurrentContactDispatch()

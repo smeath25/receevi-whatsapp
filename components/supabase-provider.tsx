@@ -12,8 +12,8 @@ type SupabaseContext = {
 
 const Context = createContext<SupabaseContext | undefined>(undefined)
 
-export default function SupabaseProvider({ children }: { children: React.ReactNode }) {
-    const [supabase] = useState(() => createClient())
+export default function SupabaseProvider({ children, supabaseUrl, supabaseAnonKey }: { children: React.ReactNode, supabaseUrl: string, supabaseAnonKey: string  }) {
+    const [supabase] = useState(() => createClient(supabaseUrl, supabaseAnonKey))
 
     return (
         <Context.Provider value={{ supabase }}>

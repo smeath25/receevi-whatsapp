@@ -10,7 +10,6 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { MessageTemplate } from "@/types/message-template";
-import { createClient } from "@/utils/supabase-browser";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Dispatch, useCallback, useEffect, useRef, useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
@@ -22,6 +21,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "./input";
 import { Label } from "./label";
 import { ButtonParameter, TemplateRequest, HeaderParameter, TextParameter, RequestComponent } from "@/types/message-template-request";
+import { useSupabase } from "../supabase-provider";
 
 const bodyVariableSchema = z.array(
     z.object({
@@ -87,7 +87,7 @@ const formSchema = z.object({
 })
 
 export default function TemplateSelection({ children, onTemplateSubmit }: { children: React.ReactElement, onTemplateSubmit: Dispatch<TemplateRequest> }) {
-    const [supabase] = useState(() => createClient())
+    const { supabase } = useSupabase()
     const [templates, setTemplates] = useState<MessageTemplate[] | null>(null);
     const [isTemplatesLoading, setTemplatesLoading] = useState<boolean>(false);
     const [selectedTemplate, setSelectedTemplate] = useState<MessageTemplate | undefined>();

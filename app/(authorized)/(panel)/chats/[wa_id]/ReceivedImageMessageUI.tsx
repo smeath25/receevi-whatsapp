@@ -1,10 +1,10 @@
 'use client'
 
 import { useEffect, useState } from "react";
-import { createClient } from "@/utils/supabase-browser";
+import { useSupabase } from "@/components/supabase-provider";
 
 export default function ReceivedImageMessageUI({ message }: { message: DBMessage }) {
-    const [supabase] = useState(() => createClient())
+    const { supabase } = useSupabase()
     const [imageUrl, setImageUrl] = useState<string | null>(null);
     useEffect(() => {
         if (message.media_url) {

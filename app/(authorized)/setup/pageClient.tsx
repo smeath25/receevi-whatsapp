@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table"
 import { DBTables } from "@/lib/enums/Tables";
 import { AppSetup } from "@/lib/repositories/setup/SetupRepository";
-import { createClient } from "@/utils/supabase-browser";
+import { useSupabase } from "@/components/supabase-provider";
 import { Circle } from 'lucide-react';
 import { useEffect, useState } from "react";
 import { Loader } from 'lucide-react';
@@ -14,15 +14,14 @@ import Link from "next/link";
 import constants from "@/lib/constants";
 
 export default function SetupFrontendClient({ pendingItems }: { pendingItems: AppSetup[] }) {
-    const [supabase] = useState(() => createClient())
+    const { supabase } = useSupabase()
     const [pendingItemsState, setPendingItems] = useState(pendingItems);
     const [isSetupCompleted, setSetupCompleted] = useState(pendingItems.length == 0)
     const [errorMessage, setErrorMessage] = useState<string>('');
 
     async function onSetupClick() {
         setErrorMessage('');
-        const supabaseClient = createClient()
-        const setupResponse = await supabaseClient.functions.invoke('setup')
+        const setupResponse = await supabase.functions.invoke('setup')
         console.log('setupResponse', setupResponse)
         if (setupResponse.error) {
             console.error(setupResponse.error);

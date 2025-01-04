@@ -17,7 +17,7 @@ import {
     FormMessage
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { createClient } from "@/utils/supabase-browser"
+import { useSupabase } from "@/components/supabase-provider"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { ReactNode, useState } from "react"
 import { useForm } from "react-hook-form"
@@ -43,7 +43,7 @@ const FormSchema = z.object({
 
 export function AddBulkContactsDialog({ children, onSuccessfulAdd }: { children: ReactNode, onSuccessfulAdd: () => void }) {
     const [isDialogOpen, setDialogOpen] = useState(false);
-    const [supabase] = useState(() => createClient())
+    const { supabase } = useSupabase()
     const [isLoading, setLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState<string>('');
     const form = useForm<z.infer<typeof FormSchema>>({
