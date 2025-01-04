@@ -1,13 +1,13 @@
+import { SupabaseClient } from "@supabase/supabase-js";
 import { BroadcastRepository } from "./BroadcastRepository";
 import { BroadcastRepositorySupabaseImpl } from "./BroadcastRepositorySupabaseImpl";
-import { createClient as createBrowserClient } from "@/utils/supabase-browser";
+import { Database } from "@/lib/database.types";
 
 export default class BroadcastBrowserFactory {
     private static _instance: BroadcastRepository;
-    public static getInstance(): BroadcastRepository {
+    public static getInstance(supabase: SupabaseClient<Database>): BroadcastRepository {
         if (!BroadcastBrowserFactory._instance) {
-            const client = createBrowserClient();
-            BroadcastBrowserFactory._instance = new BroadcastRepositorySupabaseImpl(client)
+            BroadcastBrowserFactory._instance = new BroadcastRepositorySupabaseImpl(supabase)
         }
         return BroadcastBrowserFactory._instance
     }

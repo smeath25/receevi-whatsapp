@@ -27,8 +27,10 @@ import { AddContactDialog } from "./AddContactDialog"
 import { ContactsTable } from "./ContactsTable"
 import { fetchData, itemsPerPage } from "./fetchData"
 import { AddBulkContactsDialog } from "./AddBulkContactsDialog"
+import { useSupabase } from "@/components/supabase-provider"
 
 export default function ContactsClient() {
+    const { supabase } = useSupabase()
     const columns = useMemo<ColumnDef<Contact>[]>(
         () => [
             // {
@@ -118,7 +120,7 @@ export default function ContactsClient() {
 
     const dataQuery = useQuery({
         queryKey: ['data', fetchDataOptions],
-        queryFn: () => fetchData(fetchDataOptions),
+        queryFn: () => fetchData(supabase, fetchDataOptions),
         placeholderData: keepPreviousData
     })
     const defaultData = React.useMemo(() => [], [])

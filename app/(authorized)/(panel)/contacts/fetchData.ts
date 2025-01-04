@@ -1,14 +1,16 @@
+import { Database } from "@/lib/database.types"
 import ContactBrowserFactory from "@/lib/repositories/contacts/ContactBrowserFactory"
 import { ContactFilterArray } from "@/lib/repositories/contacts/ContactRepository"
+import { SupabaseClient } from "@supabase/supabase-js"
 
 export const itemsPerPage = 10
 
-export async function fetchData(options: {
+export async function fetchData(supabase: SupabaseClient<Database>, options: {
     pageIndex: number
     pageSize: number
     searchFilter: string
 }) {
-    const contactRepository = ContactBrowserFactory.getInstance()
+    const contactRepository = ContactBrowserFactory.getInstance(supabase)
     const limit = options.pageSize;
     const offset = options.pageSize * options.pageIndex;
     let filter: ContactFilterArray | undefined = undefined

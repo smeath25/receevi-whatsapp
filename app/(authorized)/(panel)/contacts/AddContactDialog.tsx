@@ -23,6 +23,7 @@ import { ReactNode, useState } from "react"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
 import { CountryDropdown, countryFormType } from "./CountryDropdown"
+import { useSupabase } from "@/components/supabase-provider"
 
 const FormSchema = z.object({
     name: z.string({
@@ -35,7 +36,8 @@ const FormSchema = z.object({
 })
 
 export function AddContactDialog({ children, onSuccessfulAdd }: { children: ReactNode, onSuccessfulAdd: () => void }) {
-    const [ isDialogOpen, setDialogOpen] = useState(false); 
+    const [ isDialogOpen, setDialogOpen] = useState(false);
+    const { supabase } = useSupabase()
     const form = useForm<z.infer<typeof FormSchema>>({
         resolver: zodResolver(FormSchema),
         defaultValues: {
@@ -48,8 +50,7 @@ export function AddContactDialog({ children, onSuccessfulAdd }: { children: Reac
     async function onSubmit(data: z.infer<typeof FormSchema>) {
         const mobileNumber = data.country.phoneCode.replace(/[\+\-]/, '') + data.wa_number
         const wa_id = Number.parseInt(mobileNumber)
-        const supabaseClient = createClient()
-        const { error } = await supabaseClient.from(DBTables.Contacts).insert({ profile_name: data.name, wa_id: wa_id })
+        const { error } = await supabase.from(DBTables.Contacts).insert({ profile_name: data.name, wa_id: wa_id })
         if (error) throw error
         form.reset()
         setDialogOpen(false)

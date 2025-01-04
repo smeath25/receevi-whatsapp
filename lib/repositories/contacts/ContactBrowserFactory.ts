@@ -1,13 +1,13 @@
+import { Database } from "@/lib/database.types";
+import { SupabaseClient } from "@supabase/supabase-js";
 import { ContactRepository } from "./ContactRepository";
 import { ContactRepositorySupabaseImpl } from "./ContactRepositorySupabaseImpl";
-import { createClient as createBrowserClient } from "@/utils/supabase-browser";
 
 export default class ContactBrowserFactory {
     private static _instance: ContactRepository;
-    public static getInstance(): ContactRepository {
+    public static getInstance(supabase: SupabaseClient<Database>): ContactRepository {
         if (!ContactBrowserFactory._instance) {
-            const client = createBrowserClient();
-            ContactBrowserFactory._instance = new ContactRepositorySupabaseImpl(client)
+            ContactBrowserFactory._instance = new ContactRepositorySupabaseImpl(supabase)
         }
         return ContactBrowserFactory._instance
     }

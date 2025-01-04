@@ -21,8 +21,8 @@ export const revalidate = 0
 export default function ContactChat({ params }: { params: { wa_id: string } }) {
     const [isChatWindowOpen, setChatWindowOpen] = useState<boolean | undefined>()
     const [lastMessageReceivedAt, setLastMessageReceivedAt] = useState<Date | undefined>()
-    const [contactRepository] = useState(() => ContactBrowserFactory.getInstance())
     const { supabase } = useSupabase()
+    const [contactRepository] = useState(() => ContactBrowserFactory.getInstance(supabase))
     const [messageTemplateSending, setMessageTemplateSending] = useState<boolean>(false);
     const [contact, setContact] = useState<Contact | undefined>();
     const setCurrentContact = useCurrentContactDispatch()
