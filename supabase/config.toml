@@ -59,7 +59,7 @@ double_confirm_changes = true
 enable_confirmations = false
 
 [auth.email.template.invite]
-subject = "You are invited to Receevi"
+subject = "You are invited to IFTA"
 content_path = "./supabase/templates/invite.html"
 
 [auth.email.template.recovery]

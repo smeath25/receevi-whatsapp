@@ -35,8 +35,8 @@ export default function PanelClient({ children }: { children: ReactNode }) {
             <div className="h-16 flex flex-row justify-between px-4 flex-shrink-0">
                 <div className="flex flex-row">
                     <div className="flex flex-row gap-2 items-center">
-                        <img src="/assets/img/icon.svg" className="w-8 h-8" />
-                        <div className="text-lg">Receevi</div>
+                        <img src="/assets/img/icon.png" className="w-8 h-8" />
+                        <div className="text-lg">IFTA</div>
                     </div>
                 </div>
                 {/* <div className="flex flex-row"> */}
