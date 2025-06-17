@@ -1,1 +1,11 @@
 Name,Number (with country code),Tags (Comma separated)
+John Smith,+1234567890,"Customer, VIP, Sales"
+Sarah Johnson,+1987654321,"Lead, Marketing"
+Mike Davis,+44123456789,"Support, Follow-up"
+Emily Brown,+33123456789,"Customer, Active"
+David Wilson,+49123456789,"Lead, New, Prospect"
+Lisa Garcia,+34123456789,"VIP, Customer, Sales"
+Robert Taylor,+39123456789,"Support, Complaint"
+Maria Rodriguez,+52123456789,"Customer, Marketing, Active"
+James Anderson,+61123456789,"Lead, Follow-up"
+Jennifer Thomas,+91123456789,"Customer, Feedback"

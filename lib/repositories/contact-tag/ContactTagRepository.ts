@@ -24,7 +24,7 @@ type FilterOperator =
   | 'phfts'
   | 'wfts'
 
-export type ContactTagFromDB = Database['public']['Tables']['message_template']['Row'];
+export type ContactTagFromDB = Database['public']['Tables']['contact_tag']['Row'];
 export type ContactTagColumnName = string & keyof ContactTagFromDB;
 export type ContactTagFilterArray = Array<{ column: ContactTagColumnName, operator: FilterOperator, value: unknown}>
 

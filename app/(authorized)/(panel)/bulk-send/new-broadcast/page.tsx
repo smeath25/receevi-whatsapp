@@ -6,6 +6,7 @@ import MessageTemplateWithLanguage from "./MessageTemplateWithLanguage"
 import { MultiSelectDropdown } from "./MultiSelectDropdown"
 import NewBroadcastPageForm from "./NewBroadcastPageForm"
 import { SubmitButton } from "./SubmitButton"
+import { TagSeeder } from "./TagSeeder"
 
 function convertToOptions(value: string): { value: string; label: string } {
     return {
@@ -87,10 +88,52 @@ async function fetchWhatsAppTemplates(): Promise<string[]> {
 
 export default async function NewBroadcastPage() {
     // Fetch templates from WhatsApp API and contact tags from database
-    const [whatsappTemplateNames, contactTags] = await Promise.all([
-        fetchWhatsAppTemplates(),
-        ContactTagServerFactory.getInstance().getContactTags()
-    ])
+    let contactTags: string[] = []
+    let whatsappTemplateNames: string[] = []
+    
+    try {
+        const results = await Promise.allSettled([
+            fetchWhatsAppTemplates(),
+            ContactTagServerFactory.getInstance().getContactTags()
+        ])
+        
+        if (results[0].status === 'fulfilled') {
+            whatsappTemplateNames = results[0].value
+        } else {
+            console.error('Error fetching WhatsApp templates:', results[0].reason)
+        }
+        
+        if (results[1].status === 'fulfilled') {
+            contactTags = results[1].value
+            console.log('Contact tags fetched:', contactTags)
+            
+            // If no tags found in contact_tag table, try to get unique tags from contacts
+            if (contactTags.length === 0) {
+                console.log('No tags in contact_tag table, fetching unique tags from contacts...')
+                try {
+                    const { createClient } = await import('@/utils/supabase-server')
+                    const supabase = createClient()
+                    
+                    const { data: contacts, error } = await supabase
+                        .from('contacts')
+                        .select('tags')
+                        .not('tags', 'is', null)
+                    
+                    if (!error && contacts) {
+                        const allTags = contacts.flatMap(contact => contact.tags || [])
+                        contactTags = [...new Set(allTags)].sort()
+                        console.log('Unique tags from contacts:', contactTags)
+                    }
+                } catch (fallbackError) {
+                    console.error('Error fetching tags from contacts:', fallbackError)
+                }
+            }
+        } else {
+            console.error('Error fetching contact tags:', results[1].reason)
+        }
+    } catch (error) {
+        console.error('Error in NewBroadcastPage data fetching:', error)
+    }
     
     const messageTemplates = whatsappTemplateNames.map(convertToOptions)
     const contactTagOptions = contactTags.map(convertToOptions)
@@ -103,8 +146,21 @@ export default async function NewBroadcastPage() {
                 </div>
                 <MessageTemplateWithLanguage messageTemplates={messageTemplates} />
                 <div className="grid gap-1.5">
-                    <Label htmlFor="contact_tags">Contact Tags</Label>
+                    <div className="flex items-center justify-between">
+                        <Label htmlFor="contact_tags">Contact Tags</Label>
+                        <TagSeeder hasNoTags={contactTagOptions.length === 0} />
+                    </div>
                     <MultiSelectDropdown name="contact_tags" displayName="tag" className="w-[20rem]" options={contactTagOptions} />
+                    {contactTagOptions.length === 0 && (
+                        <p className="text-sm text-amber-600">
+                            No tags available. Click &quot;Create Sample Tags&quot; above or add tags to contacts first.
+                        </p>
+                    )}
+                    {contactTagOptions.length > 0 && (
+                        <p className="text-xs text-gray-500">
+                            {contactTagOptions.length} tag(s) available for selection.
+                        </p>
+                    )}
                 </div>
                 <SubmitButton/>
             </NewBroadcastPageForm>
