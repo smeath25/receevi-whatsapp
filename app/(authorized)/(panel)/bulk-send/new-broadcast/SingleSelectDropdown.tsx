@@ -27,24 +27,26 @@ export type SelectOption = {
 
 export const emptyOption: SelectOption = { value: '', label: '' }
 
-export function SingleSelectDropdown({ options, name, displayName, className, onChange, value }: {
+export function SingleSelectDropdown({ options, name, displayName, className, onChange, value, disabled }: {
   options: SelectOption[],
   name: string,
   displayName: string,
   className?: string,
   value: SelectOption,
-  onChange?: (option: SelectOption) => void
+  onChange?: (option: SelectOption) => void,
+  disabled?: boolean
 }) {
   const [open, setOpen] = React.useState(false)
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={disabled ? undefined : setOpen}>
       <Input type="hidden" value={value?.value} name={name} />
       <PopoverTrigger asChild>
         <Button
           variant="outline"
           role="combobox"
           aria-expanded={open}
+          disabled={disabled}
           className={`justify-between ${className ?? ''}`}
         >
           {value != emptyOption

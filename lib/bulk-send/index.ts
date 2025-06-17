@@ -21,8 +21,47 @@ type BulkSendRequest = {
 }
 
 export async function getTemplateLanguges(templateName: string): Promise<string[]> {
-    const messageTemplateRepo = MessageTemplateServerFactory.getInstance()
-    return await messageTemplateRepo.getMessageTemplateLanguages(templateName)
+    try {
+        // Fetch directly from WhatsApp API to get the most up-to-date languages
+        const whatsappBusinessAccountId = process.env.WHATSAPP_BUSINESS_ACCOUNT_ID
+        const whatsappAccessToken = process.env.WHATSAPP_ACCESS_TOKEN
+        
+        if (!whatsappBusinessAccountId || !whatsappAccessToken) {
+            console.error('WhatsApp configuration missing, falling back to database')
+            const messageTemplateRepo = MessageTemplateServerFactory.getInstance()
+            return await messageTemplateRepo.getMessageTemplateLanguages(templateName)
+        }
+
+        const response = await fetch(
+            `https://graph.facebook.com/v17.0/${whatsappBusinessAccountId}/message_templates?name=${encodeURIComponent(templateName)}&status=APPROVED`,
+            {
+                headers: {
+                    'Authorization': `Bearer ${whatsappAccessToken}`
+                }
+            }
+        )
+
+        if (!response.ok) {
+            console.error('Failed to fetch template languages from WhatsApp API:', response.status)
+            // Fallback to database
+            const messageTemplateRepo = MessageTemplateServerFactory.getInstance()
+            return await messageTemplateRepo.getMessageTemplateLanguages(templateName)
+        }
+
+        const data = await response.json()
+        const languages = data.data
+            .filter((template: any) => template.name === templateName && template.status === 'APPROVED')
+            .map((template: any) => template.language)
+        
+        // Remove duplicates and sort
+        return [...new Set(languages)].sort()
+        
+    } catch (error) {
+        console.error('Error fetching template languages from WhatsApp API:', error)
+        // Fallback to database
+        const messageTemplateRepo = MessageTemplateServerFactory.getInstance()
+        return await messageTemplateRepo.getMessageTemplateLanguages(templateName)
+    }
 }
 
 export async function bulkSend(prevState: {message: string}, formData: FormData) {
