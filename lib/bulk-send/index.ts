@@ -112,18 +112,38 @@ export async function bulkSend(prevState: {message: string}, formData: FormData)
         }
 
         console.log('Authenticated user:', user.email)
-        console.log('Invoking bulk-send edge function...')
+        console.log('Invoking bulk-send edge function with data:', JSON.stringify(bulkSendRequest, null, 2))
 
         const { data, error } = await supabase.functions.invoke('bulk-send', {
             body: bulkSendRequest
         })
         
+        console.log('Edge function response:', { data, error })
+        
         if (error) {
-            console.error('Edge function error:', error)
-            return { message: `Failed to initiate bulk send: ${error.message || 'Unknown error'}` }
+            console.error('Edge function error details:', {
+                message: error.message,
+                details: error.details,
+                hint: error.hint,
+                code: error.code,
+                status: error.status,
+                statusText: error.statusText
+            })
+            
+            // Try to extract more meaningful error from the response
+            let errorMessage = 'Unknown error'
+            if (error.message) {
+                errorMessage = error.message
+            } else if (error.details) {
+                errorMessage = error.details
+            } else if (error.hint) {
+                errorMessage = error.hint
+            }
+            
+            return { message: `Failed to initiate bulk send: ${errorMessage}` }
         }
 
-        console.log('Bulk send response:', data)
+        console.log('Bulk send successful, response data:', data)
         
         revalidatePath('/bulk-send', 'page');
         redirect('/bulk-send');

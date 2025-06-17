@@ -62,6 +62,8 @@ async function markContactsForSend(supabase: SupabaseClientType, broadcastId: st
 }
 
 serve(async (req) => {
+  console.log('Bulk-send function invoked, method:', req.method)
+  
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
@@ -91,10 +93,14 @@ serve(async (req) => {
 
     let requestData: BulkSendRequest
     try {
-      requestData = await req.json()
+      const rawBody = await req.text()
+      console.log('Raw request body:', rawBody)
+      requestData = JSON.parse(rawBody)
+      console.log('Parsed request data:', JSON.stringify(requestData, null, 2))
     } catch (parseError) {
+      console.error('JSON parse error:', parseError)
       return new Response(
-        JSON.stringify({ error: 'Invalid JSON in request body' }),
+        JSON.stringify({ error: 'Invalid JSON in request body', details: parseError.message }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
       )
     }
