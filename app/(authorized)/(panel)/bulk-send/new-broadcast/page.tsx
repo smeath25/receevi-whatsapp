@@ -44,9 +44,9 @@ async function fetchWhatsAppTemplates(): Promise<string[]> {
         const approvedTemplates = data.data.filter((template: any) => template.status === 'APPROVED')
         
         // Get unique template names
-        const uniqueNames = [...new Set(approvedTemplates.map((template: any) => template.name))].sort()
+        const uniqueNames = [...new Set(approvedTemplates.map((template: any) => template.name as string))].sort()
         
-        return uniqueNames
+        return uniqueNames as string[]
     } catch (error) {
         console.error('Error fetching WhatsApp templates:', error)
         return []

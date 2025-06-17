@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
     if (refresh) {
       // Fetch fresh templates from WhatsApp API
       const fetchLimit = 100
-      let next = `https://graph.facebook.com/v17.0/${whatsappBusinessAccountId}/message_templates?limit=${fetchLimit}`
+      let next: string | null = `https://graph.facebook.com/v17.0/${whatsappBusinessAccountId}/message_templates?limit=${fetchLimit}`
       
       while (next) {
         console.log(`Fetching templates from: ${next}`)

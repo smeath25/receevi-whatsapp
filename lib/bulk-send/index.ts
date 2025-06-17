@@ -51,10 +51,10 @@ export async function getTemplateLanguges(templateName: string): Promise<string[
         const data = await response.json()
         const languages = data.data
             .filter((template: any) => template.name === templateName && template.status === 'APPROVED')
-            .map((template: any) => template.language)
+            .map((template: any) => template.language as string)
         
         // Remove duplicates and sort
-        return [...new Set(languages)].sort()
+        return [...new Set(languages)].sort() as string[]
         
     } catch (error) {
         console.error('Error fetching template languages from WhatsApp API:', error)
