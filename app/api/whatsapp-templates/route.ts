@@ -61,7 +61,24 @@ export async function GET(request: NextRequest) {
           return new NextResponse(`WhatsApp API error: ${response.status}`, { status: 500 })
         }
         
-        const jsonResponse: WhatsAppTemplateResponse = await response.json()
+        const responseText = await response.text()
+        if (!responseText) {
+          console.error('Empty response from WhatsApp API')
+          return new NextResponse('Empty response from WhatsApp API', { status: 500 })
+        }
+
+        let jsonResponse: WhatsAppTemplateResponse
+        try {
+          jsonResponse = JSON.parse(responseText)
+        } catch (parseError) {
+          console.error('Failed to parse WhatsApp API response:', parseError, 'Response:', responseText)
+          return new NextResponse('Invalid JSON response from WhatsApp API', { status: 500 })
+        }
+
+        if (!jsonResponse.data || !Array.isArray(jsonResponse.data)) {
+          console.error('Invalid WhatsApp API response structure:', jsonResponse)
+          return new NextResponse('Invalid response structure from WhatsApp API', { status: 500 })
+        }
         templates = [...templates, ...jsonResponse.data]
         
         next = jsonResponse.paging?.next || null

@@ -1,6 +1,7 @@
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import ContactTagServerFactory from "@/lib/repositories/contact-tag/ContactTagServerFactory"
+import MessageTemplateServerFactory from "@/lib/repositories/message-template/MessageTemplateServerFactory"
 import MessageTemplateWithLanguage from "./MessageTemplateWithLanguage"
 import { MultiSelectDropdown } from "./MultiSelectDropdown"
 import NewBroadcastPageForm from "./NewBroadcastPageForm"
@@ -20,7 +21,10 @@ async function fetchWhatsAppTemplates(): Promise<string[]> {
         const whatsappAccessToken = process.env.WHATSAPP_ACCESS_TOKEN
         
         if (!whatsappBusinessAccountId || !whatsappAccessToken) {
-            console.error('WhatsApp configuration missing')
+            console.error('WhatsApp configuration missing:', {
+                hasBusinessAccountId: !!whatsappBusinessAccountId,
+                hasAccessToken: !!whatsappAccessToken
+            })
             return []
         }
 
@@ -36,11 +40,29 @@ async function fetchWhatsAppTemplates(): Promise<string[]> {
         )
 
         if (!response.ok) {
-            console.error('Failed to fetch templates from WhatsApp API:', response.status)
+            console.error('Failed to fetch templates from WhatsApp API:', response.status, await response.text())
             return []
         }
 
-        const data = await response.json()
+        const responseText = await response.text()
+        if (!responseText) {
+            console.error('Empty response from WhatsApp API')
+            return []
+        }
+
+        let data
+        try {
+            data = JSON.parse(responseText)
+        } catch (parseError) {
+            console.error('Failed to parse WhatsApp API response:', parseError, 'Response:', responseText)
+            return []
+        }
+
+        if (!data.data || !Array.isArray(data.data)) {
+            console.error('Invalid WhatsApp API response structure:', data)
+            return []
+        }
+
         const approvedTemplates = data.data.filter((template: any) => template.status === 'APPROVED')
         
         // Get unique template names
@@ -49,7 +71,17 @@ async function fetchWhatsAppTemplates(): Promise<string[]> {
         return uniqueNames as string[]
     } catch (error) {
         console.error('Error fetching WhatsApp templates:', error)
-        return []
+        
+        // Fallback to database templates
+        try {
+            console.log('Falling back to database templates...')
+            const messageTemplateRepo = MessageTemplateServerFactory.getInstance()
+            const templateNames = await messageTemplateRepo.getMessageTemplateUniqueNames()
+            return templateNames
+        } catch (dbError) {
+            console.error('Error fetching database templates:', dbError)
+            return []
+        }
     }
 }
 

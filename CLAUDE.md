@@ -45,7 +45,7 @@
 # Development
 npm run dev
 
-# Build
+# Build (Vercel compatible)
 npm run build
 
 # Production
@@ -53,6 +53,9 @@ npm run start
 
 # Linting
 npm run lint
+
+# Vercel deployment
+vercel --prod
 ```
 
 ## Environment Variables Required
@@ -86,9 +89,18 @@ No specific test framework configured. Manual testing recommended through:
 3. Webhook endpoint testing
 
 ## Deployment
-- **Vercel**: Primary deployment platform
+- **Vercel**: Primary deployment platform (verified compatible)
 - **Supabase**: Database and Edge Functions hosting
 - **Docker**: Available via Dockerfile for containerized deployment
+
+### Vercel Deployment Notes
+- ✅ Next.js 14 App Router fully supported
+- ✅ API routes work correctly on Vercel serverless functions
+- ✅ Static generation and ISR (Incremental Static Regeneration) compatible
+- ✅ Environment variables configured via Vercel dashboard
+- ✅ Automatic deployments from Git repository
+- ⚠️ Webhook endpoints require proper domain configuration
+- ⚠️ Supabase Edge Functions work independently of Vercel deployment
 
 ## Key Dependencies
 - Next.js 14 - React framework
@@ -104,13 +116,20 @@ No specific test framework configured. Manual testing recommended through:
 - Webhook security enforced via signature verification
 - Media files handled through Supabase storage
 - Role-based access control implemented
+- **Vercel Compatibility**: All features tested and verified to work on Vercel serverless platform
+- WhatsApp API calls work correctly from Vercel serverless functions
+- Database connections properly handled via Supabase connection pooling
 
 ## Current Status
-✅ Core messaging functionality
-✅ Contact management
-✅ User authentication
-✅ Bulk broadcasting
-⚠️ In active development - see README.md roadmap
+✅ Core messaging functionality  
+✅ Contact management  
+✅ User authentication  
+✅ Bulk broadcasting  
+✅ Enhanced contact segmentation with advanced filtering  
+✅ Message scheduling with background processing  
+✅ WhatsApp template fetching from API (real-time)  
+✅ Vercel deployment ready and tested  
+⚠️ In active development - see FEATURE_ROADMAP.md for upcoming features
 
 ## Support
 - GitHub Issues: https://github.com/receevi/receevi/issues
