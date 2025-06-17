@@ -6,14 +6,14 @@ import { MultiSelectDropdown } from "./MultiSelectDropdown"
 import NewBroadcastPageForm from "./NewBroadcastPageForm"
 import { SubmitButton } from "./SubmitButton"
 
-function convertToOptions(value: string) {
+function convertToOptions(value: string): { value: string; label: string } {
     return {
         value: value,
         label: value,
     }
 }
 
-async function fetchWhatsAppTemplates() {
+async function fetchWhatsAppTemplates(): Promise<string[]> {
     try {
         // For server-side rendering, we'll use the WhatsApp API directly
         const whatsappBusinessAccountId = process.env.WHATSAPP_BUSINESS_ACCOUNT_ID
