@@ -25,9 +25,14 @@ import { Contact } from "@/types/contact"
 import Loading from "../../../loading"
 import { AddContactDialog } from "./AddContactDialog"
 import { ContactsTable } from "./ContactsTable"
-import { fetchData, itemsPerPage } from "./fetchData"
+import { fetchData, getContactCounts, itemsPerPage } from "./fetchData"
 import { AddBulkContactsDialog } from "./AddBulkContactsDialog"
 import { useSupabase } from "@/components/supabase-provider"
+import { AdvancedFilters, AdvancedFilterOptions } from "@/components/contacts/AdvancedFilters"
+import { SavedFilters, SavedFilter } from "@/components/contacts/SavedFilters"
+import { SmartLists } from "@/components/contacts/SmartLists"
+import { getFilterDisplayText } from "@/lib/contacts/filterUtils"
+import { exportContactsToCSV, generateExportFilename } from "@/lib/contacts/exportUtils"
 
 export default function ContactsClient() {
     const { supabase } = useSupabase()
@@ -110,12 +115,16 @@ export default function ContactsClient() {
             pageIndex: 0,
             pageSize: itemsPerPage,
         })
-    const [ searchFilter, setSearchFilter ] = useState("")
+    const [searchFilter, setSearchFilter] = useState("")
+    const [advancedFilters, setAdvancedFilters] = useState<AdvancedFilterOptions>({})
+    const [savedFilters, setSavedFilters] = useState<SavedFilter[]>([])
+    const [currentFilterName, setCurrentFilterName] = useState<string>("")
 
     const fetchDataOptions = {
         pageIndex,
         pageSize,
-        searchFilter
+        searchFilter,
+        advancedFilters
     }
 
     const dataQuery = useQuery({
@@ -123,6 +132,13 @@ export default function ContactsClient() {
         queryFn: () => fetchData(supabase, fetchDataOptions),
         placeholderData: keepPreviousData
     })
+    
+    const countsQuery = useQuery({
+        queryKey: ['contact-counts'],
+        queryFn: () => getContactCounts(supabase),
+        staleTime: 5 * 60 * 1000, // 5 minutes
+    })
+    
     const defaultData = React.useMemo(() => [], [])
 
     const pagination = React.useMemo(
@@ -137,6 +153,67 @@ export default function ContactsClient() {
     const [columnVisibility, setColumnVisibility] =
         React.useState<VisibilityState>({})
     const [rowSelection, setRowSelection] = React.useState({})
+
+    // Handler functions
+    const handleFiltersChange = (newFilters: AdvancedFilterOptions) => {
+        setAdvancedFilters(newFilters)
+        setPagination(prev => ({ ...prev, pageIndex: 0 })) // Reset to first page
+        setCurrentFilterName("") // Clear current filter name when manually changing
+    }
+
+    const handleSaveFilter = (name: string, filters: AdvancedFilterOptions) => {
+        const newFilter: SavedFilter = {
+            id: Date.now().toString(),
+            name,
+            filters,
+            createdAt: new Date()
+        }
+        setSavedFilters(prev => [...prev, newFilter])
+        setCurrentFilterName(name)
+    }
+
+    const handleLoadFilter = (filters: AdvancedFilterOptions) => {
+        setAdvancedFilters(filters)
+        setPagination(prev => ({ ...prev, pageIndex: 0 }))
+    }
+
+    const handleDeleteFilter = (id: string) => {
+        setSavedFilters(prev => prev.filter(f => f.id !== id))
+    }
+
+    const handleExport = async () => {
+        try {
+            // Fetch all matching contacts (without pagination) for export
+            const exportData = await fetchData(supabase, {
+                pageIndex: 0,
+                pageSize: 10000, // Large number to get all results
+                searchFilter,
+                advancedFilters
+            })
+            
+            if (exportData.rows.length === 0) {
+                alert('No contacts match the current filters.')
+                return
+            }
+            
+            const filterSummary = getFilterDisplayText(advancedFilters)
+            const filename = generateExportFilename(filterSummary)
+            
+            exportContactsToCSV(exportData.rows, filename)
+            
+            // Show success message
+            alert(`Successfully exported ${exportData.rows.length} contacts to ${filename}`)
+        } catch (error) {
+            console.error('Export failed:', error)
+            alert('Export failed. Please try again.')
+        }
+    }
+
+    const handleSmartListSelect = (filters: AdvancedFilterOptions, name: string) => {
+        setAdvancedFilters(filters)
+        setCurrentFilterName(name)
+        setPagination(prev => ({ ...prev, pageIndex: 0 }))
+    }
 
     const table = useReactTable<Contact>({
         data: dataQuery.data?.rows ?? defaultData,
@@ -161,9 +238,47 @@ export default function ContactsClient() {
 
     return (
         <div className="m-4 bg-white rounded-xl p-4">
+            {/* Smart Lists */}
+            <div className="mb-6">
+                <SmartLists 
+                    onSelectSmartList={handleSmartListSelect}
+                    contactCounts={countsQuery.data}
+                />
+            </div>
+
+            {/* Filter Controls */}
+            <div className="space-y-4 mb-6">
+                <div className="flex flex-wrap items-center gap-4">
+                    <AdvancedFilters
+                        filters={advancedFilters}
+                        onFiltersChange={handleFiltersChange}
+                        onExport={handleExport}
+                        onSaveFilter={handleSaveFilter}
+                        availableTags={[]} // TODO: Get from API
+                        availableAgents={[]} // TODO: Get from API
+                    />
+                    <SavedFilters
+                        savedFilters={savedFilters}
+                        onLoadFilter={handleLoadFilter}
+                        onDeleteFilter={handleDeleteFilter}
+                    />
+                </div>
+                
+                {/* Current filter display */}
+                {(Object.keys(advancedFilters).length > 0 || currentFilterName) && (
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <span className="font-medium">
+                            {currentFilterName ? `"${currentFilterName}"` : 'Active filters:'}
+                        </span>
+                        <span>{getFilterDisplayText(advancedFilters)}</span>
+                    </div>
+                )}
+            </div>
+
+            {/* Legacy Search - keeping for quick name search */}
             <div className="flex justify-between items-center py-4">
                 <Input
-                    placeholder="Search name..."
+                    placeholder="Quick search name..."
                     value={searchFilter}
                     onChange={(event) => setSearchFilter(event.target.value) }
                     className="max-w-sm"

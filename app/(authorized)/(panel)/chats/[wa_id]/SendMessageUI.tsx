@@ -5,8 +5,10 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuShortcut, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import TemplateSelection from "@/components/ui/template-selection";
 import { TemplateRequest } from "@/types/message-template-request";
-import { Image as ImageIcon, File as FileIcon, Paperclip, MessageSquareDashed, XCircle } from "lucide-react";
+import { Image as ImageIcon, File as FileIcon, Paperclip, MessageSquareDashed, XCircle, Clock } from "lucide-react";
 import { Dispatch, SetStateAction, useCallback, useEffect, useRef, useState } from "react";
+import { ScheduleMessageDialog } from "@/components/scheduling/ScheduleMessageDialog";
+import { ScheduledMessageFormData } from "@/types/scheduled-message";
 
 export type FileType = 'image' | 'video' | 'file' | undefined
 
@@ -19,12 +21,28 @@ type SendMessageUIProps = {
     setFileType: Dispatch<SetStateAction<FileType | undefined>>
     setFile: Dispatch<SetStateAction<File | undefined>>
     onTemplateMessageSend: (req: TemplateRequest) => Promise<void>
+    onScheduleMessage: (data: ScheduledMessageFormData) => Promise<void>
+    contactName?: string
+    waId: string
 }
 
-export default function SendMessageUI({ message, fileType, file, setMessage, setFile, setFileType, onMessageSend, onTemplateMessageSend }: SendMessageUIProps) {
+export default function SendMessageUI({ 
+    message, 
+    fileType, 
+    file, 
+    setMessage, 
+    setFile, 
+    setFileType, 
+    onMessageSend, 
+    onTemplateMessageSend, 
+    onScheduleMessage, 
+    contactName, 
+    waId 
+}: SendMessageUIProps) {
     const [messageSendInProgress, setMessageSendInProgress] = useState<boolean>(false);
     const [mediaSrcUrl, setMediaSrcUrl] = useState<string | undefined>()
     const [fileName, setFileName] = useState<string | undefined>()
+    const [showScheduleDialog, setShowScheduleDialog] = useState(false)
     const messageTemplateOpenerButton = useRef<HTMLButtonElement>(null);
 
     useEffect(() => {
@@ -128,8 +146,28 @@ export default function SendMessageUI({ message, fileType, file, setMessage, set
                 <TemplateSelection onTemplateSubmit={onTemplateSubmit}>
                     <Button ref={messageTemplateOpenerButton} className="hidden">Open message template</Button>
                 </TemplateSelection>
+                <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowScheduleDialog(true)}
+                    disabled={messageSendInProgress || (!message?.trim() && !file)}
+                    className="min-w-fit"
+                >
+                    <Clock className="h-4 w-4 mr-2" />
+                    Schedule
+                </Button>
                 <Button type="submit" className="w-32" disabled={messageSendInProgress}>{messageSendInProgress ? <TWLoader className="w-4 h-4" /> : 'Send'}</Button>
             </form>
+            
+            <ScheduleMessageDialog
+                isOpen={showScheduleDialog}
+                onOpenChange={setShowScheduleDialog}
+                onSchedule={onScheduleMessage}
+                message={message}
+                file={file}
+                fileType={fileType === 'file' ? 'document' : fileType}
+                contactName={contactName}
+            />
         </>
     )
 }

@@ -409,6 +409,71 @@ export type Database = {
           },
         ]
       }
+      scheduled_messages: {
+        Row: {
+          id: string
+          to: number
+          message_content: string | null
+          message_type: string
+          file_data: Json | null
+          template_data: Json | null
+          scheduled_at: string
+          status: string
+          created_at: string
+          updated_at: string
+          created_by: string | null
+          sent_at: string | null
+          wam_id: string | null
+          error_message: string | null
+          retry_count: number
+          max_retries: number
+        }
+        Insert: {
+          id?: string
+          to: number
+          message_content?: string | null
+          message_type: string
+          file_data?: Json | null
+          template_data?: Json | null
+          scheduled_at: string
+          status?: string
+          created_at?: string
+          updated_at?: string
+          created_by?: string | null
+          sent_at?: string | null
+          wam_id?: string | null
+          error_message?: string | null
+          retry_count?: number
+          max_retries?: number
+        }
+        Update: {
+          id?: string
+          to?: number
+          message_content?: string | null
+          message_type?: string
+          file_data?: Json | null
+          template_data?: Json | null
+          scheduled_at?: string
+          status?: string
+          created_at?: string
+          updated_at?: string
+          created_by?: string | null
+          sent_at?: string | null
+          wam_id?: string | null
+          error_message?: string | null
+          retry_count?: number
+          max_retries?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scheduled_messages_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       webhook: {
         Row: {
           created_at: string | null
@@ -519,6 +584,36 @@ export type Database = {
           sent_at_in: string
         }
         Returns: boolean
+      }
+      get_pending_scheduled_messages: {
+        Args: {
+          limit_count?: number
+        }
+        Returns: {
+          id: string
+          to: number
+          message_content: string | null
+          message_type: string
+          file_data: Json | null
+          template_data: Json | null
+          scheduled_at: string
+          created_by: string | null
+          retry_count: number
+        }[]
+      }
+      mark_scheduled_message_sent: {
+        Args: {
+          message_id: string
+          whatsapp_message_id: string
+        }
+        Returns: undefined
+      }
+      mark_scheduled_message_failed: {
+        Args: {
+          message_id: string
+          error_msg: string
+        }
+        Returns: undefined
       }
     }
     Enums: {

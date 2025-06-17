@@ -24,6 +24,7 @@ type FilterOperator =
   | 'plfts'
   | 'phfts'
   | 'wfts'
+  | 'overlaps'
 
 export type ContactFromDB = Database['public']['Tables']['contacts']['Row'];
 export type ContactColumnName = string & keyof ContactFromDB;

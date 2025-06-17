@@ -3,8 +3,9 @@
 import { useCallback, useState } from "react";
 import SendMessageUI, { FileType } from "./SendMessageUI";
 import { TemplateRequest } from "@/types/message-template-request";
+import { ScheduledMessageFormData } from "@/types/scheduled-message";
 
-export default function SendMessageWrapper({ waId }: { waId: string }) {
+export default function SendMessageWrapper({ waId, contactName }: { waId: string, contactName?: string }) {
     const [message, setMessage] = useState<string>('');
     const [fileType, setFileType] = useState<FileType | undefined>();
     const [file, setFile] = useState<File | undefined>();
@@ -45,7 +46,56 @@ export default function SendMessageWrapper({ waId }: { waId: string }) {
 
     }, [waId])
 
+    const onScheduleMessage = useCallback(async (data: ScheduledMessageFormData) => {
+        const formData = new FormData();
+        formData.set('to', waId);
+        formData.set('scheduledAt', data.scheduledDateTime.toISOString());
+        
+        if (data.message?.trim()) {
+            formData.set('message', data.message.trim());
+        }
+        
+        if (data.file && data.fileType) {
+            formData.set('fileType', data.fileType);
+            formData.set('file', data.file);
+        }
+        
+        if (data.template) {
+            formData.set('template', JSON.stringify(data.template));
+        }
+
+        const response = await fetch('/api/scheduleMessage', {
+            method: 'POST',
+            body: formData,
+        });
+
+        if (response.status === 200) {
+            // Clear form on successful scheduling
+            setMessage('');
+            setFileType(undefined);
+            setFile(undefined);
+            
+            // TODO: Show success toast
+            console.log('Message scheduled successfully');
+        } else {
+            const errorText = await response.text();
+            throw new Error(`Failed to schedule message: ${errorText}`);
+        }
+    }, [waId]);
+
     return (
-        <SendMessageUI message={message} file={file} fileType={fileType} setMessage={setMessage} setFileType={setFileType} setFile={setFile} onMessageSend={onMessageSend} onTemplateMessageSend={onTemplateMessageSend} />
+        <SendMessageUI 
+            message={message} 
+            file={file} 
+            fileType={fileType} 
+            setMessage={setMessage} 
+            setFileType={setFileType} 
+            setFile={setFile} 
+            onMessageSend={onMessageSend} 
+            onTemplateMessageSend={onTemplateMessageSend}
+            onScheduleMessage={onScheduleMessage}
+            contactName={contactName}
+            waId={waId}
+        />
     )
 }

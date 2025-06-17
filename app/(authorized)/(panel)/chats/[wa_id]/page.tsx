@@ -99,7 +99,7 @@ export default function ContactChat({ params }: { params: { wa_id: string } }) {
                                     {(() => {
                                         if (typeof isChatWindowOpen !== 'undefined' && typeof contact !== 'undefined') {
                                             if (isChatWindowOpen) {
-                                                return <SendMessageWrapper waId={params.wa_id} />
+                                                return <SendMessageWrapper waId={params.wa_id} contactName={contact.profile_name || undefined} />
                                             } else {
                                                 return (
                                                     <div className="p-4 bg-white flex flex-row gap-4 items-center">
