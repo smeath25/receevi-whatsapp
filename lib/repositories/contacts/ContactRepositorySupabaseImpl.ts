@@ -1,7 +1,7 @@
 import { DBTables } from "@/lib/enums/Tables";
 import { createClient as createBrowserClient } from "@/utils/supabase-browser";
 import { Contact } from "../../../types/contact";
-import { ContactColumnName, ContactFilterArray, ContactFromDB, ContactRepository } from "./ContactRepository";
+import { ContactColumnName, ContactFilterArray, ContactFromDB, ContactRepository, ContactUpdate } from "./ContactRepository";
 
 type SupabaseClientType = ReturnType<typeof createBrowserClient>
 
@@ -63,5 +63,24 @@ export class ContactRepositorySupabaseImpl implements ContactRepository {
             .eq('wa_id', contactId)
         if (error) throw error
         return data && data[0]
+    }
+
+    async updateContact(wa_id: number, updates: Omit<ContactUpdate, 'wa_id'>): Promise<ContactFromDB> {
+        // Use API route for consistency and better error handling
+        const response = await fetch(`/api/contacts/${wa_id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(updates),
+        })
+
+        if (!response.ok) {
+            const errorData = await response.json()
+            throw new Error(errorData.error || 'Failed to update contact')
+        }
+
+        const result = await response.json()
+        return result.contact
     }
 }

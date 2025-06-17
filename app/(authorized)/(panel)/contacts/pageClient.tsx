@@ -24,6 +24,7 @@ import { useMemo, useState } from "react"
 import { Contact } from "@/types/contact"
 import Loading from "../../../loading"
 import { AddContactDialog } from "./AddContactDialog"
+import { EditContactDialog } from "./EditContactDialog"
 import { ContactsTable } from "./ContactsTable"
 import { fetchData, getContactCounts, itemsPerPage } from "./fetchData"
 import { AddBulkContactsDialog } from "./AddBulkContactsDialog"
@@ -89,6 +90,13 @@ export default function ContactsClient() {
                 size: 40,
                 enableHiding: false,
                 cell: ({ row }) => {
+                    const contact = row.original
+                    
+                    const handleEditContact = () => {
+                        setEditingContact(contact)
+                        setIsEditDialogOpen(true)
+                    }
+                    
                     return (
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -100,7 +108,12 @@ export default function ContactsClient() {
                             <DropdownMenuContent align="end">
                                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem>Coming soon</DropdownMenuItem>
+                                <DropdownMenuItem onClick={handleEditContact}>
+                                    Edit Contact
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => navigator.clipboard.writeText(contact.wa_id.toString())}>
+                                    Copy WhatsApp Number
+                                </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
                     )
@@ -119,6 +132,8 @@ export default function ContactsClient() {
     const [advancedFilters, setAdvancedFilters] = useState<AdvancedFilterOptions>({})
     const [savedFilters, setSavedFilters] = useState<SavedFilter[]>([])
     const [currentFilterName, setCurrentFilterName] = useState<string>("")
+    const [editingContact, setEditingContact] = useState<Contact | null>(null)
+    const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
 
     const fetchDataOptions = {
         pageIndex,
@@ -324,6 +339,21 @@ export default function ContactsClient() {
                     </Button>
                 </div>
             </div>
+            
+            {/* Edit Contact Dialog */}
+            {editingContact && (
+                <EditContactDialog
+                    contact={editingContact}
+                    isOpen={isEditDialogOpen}
+                    onOpenChange={setIsEditDialogOpen}
+                    onSuccessfulEdit={() => {
+                        dataQuery.refetch()
+                        setEditingContact(null)
+                    }}
+                >
+                    <div />
+                </EditContactDialog>
+            )}
         </div>
     )
 }

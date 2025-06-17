@@ -30,6 +30,8 @@ export type ContactFromDB = Database['public']['Tables']['contacts']['Row'];
 export type ContactColumnName = string & keyof ContactFromDB;
 export type ContactFilterArray = Array<{ column: ContactColumnName, operator: FilterOperator, value: unknown}>
 
+export type ContactUpdate = Database['public']['Tables']['contacts']['Update'];
+
 export interface ContactRepository {
     getContacts(
         filters?: ContactFilterArray,
@@ -43,5 +45,6 @@ export interface ContactRepository {
 
     getContactsHavingTag(tags: string[]): Promise<ContactFromDB[]>
     getContactById(contactId: string): Promise<ContactFromDB>
+    updateContact(wa_id: number, updates: Omit<ContactUpdate, 'wa_id'>): Promise<ContactFromDB>
 }
 
