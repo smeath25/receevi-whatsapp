@@ -28,6 +28,12 @@ async function markContactsForSend(supabase: SupabaseClientType, broadcastId: st
       .overlaps('tags', tags)
       .range(from, to)
     if (error) throw error
+    
+    if (!contacts || contacts.length === 0) {
+      console.log(`BroadcastId: ${broadcastId} - No more contacts found for tags: ${tags.join(', ')}`)
+      break
+    }
+    
     const broadcastContacts = contacts.map((item) => {
       return {
         broadcast_id: broadcastId,
@@ -35,9 +41,12 @@ async function markContactsForSend(supabase: SupabaseClientType, broadcastId: st
         batch_id: batchId
       }
     })
-    await supabase
+    
+    const { error: errorContactInsert } = await supabase
       .from('broadcast_contact')
       .insert(broadcastContacts)
+    if (errorContactInsert) throw errorContactInsert
+    
     batches.push(batchId)
     const { error: errorBatchInsert } = await supabase.from('broadcast_batch').insert({
       'id': batchId,
@@ -53,58 +62,168 @@ async function markContactsForSend(supabase: SupabaseClientType, broadcastId: st
 }
 
 serve(async (req) => {
-  const authorizationHeader = req.headers.get('Authorization')!
-  const supabase = createSupabaseClient(authorizationHeader)
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    return new Response('', { status: 401, headers: corsHeaders })
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
   }
-  const requestData: BulkSendRequest = await req.json()
 
-  const { data: broadcast, error } = await supabase
-    .from('broadcast')
-    .insert([
-      {
-        name: requestData.name,
-        template_name: requestData.messageTemplate,
-        contact_tags: requestData.contactTags,
-        language: requestData.language
-      },
-    ])
-    .select()
-  if (error) throw error
-  if (broadcast.length <= 0) {
-    throw new Error(`failed to create broadcast. name: ${requestData.name} template_name: ${requestData.messageTemplate}`)
-  }
-  const broadcastId: string = broadcast[0].id
-  console.log(`Broadcast created - ${broadcastId}`)
-  const contactsMarkedForSent = await markContactsForSend(supabase, broadcastId, requestData.contactTags)
-  console.log(`BroadcastId: ${broadcastId} - ${contactsMarkedForSent.scheduledCount} contacts marked for send`)
+  try {
+    const authorizationHeader = req.headers.get('Authorization')!
+    if (!authorizationHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Authorization header required' }),
+        { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      )
+    }
 
-  const { error: errorUpdateBroadcastSC } = await supabase
-    .from('broadcast')
-    .update({ scheduled_count: contactsMarkedForSent.scheduledCount })
-    .eq('id', broadcastId)
-  if (errorUpdateBroadcastSC) throw errorUpdateBroadcastSC
+    const supabase = createSupabaseClient(authorizationHeader)
 
-  const messageTemplate = await getMessageTemplate(requestData.messageTemplate, requestData.language)
+    const {
+      data: { user },
+      error: authError
+    } = await supabase.auth.getUser()
 
-  for (let i = 0; i < Math.min(PARALLEL_BATCH_COUNT, contactsMarkedForSent.batches.length); i++) {
-    supabase.functions.invoke('send-message-batch', {
-      body: {
-        broadcast: broadcast[0],
-        messageTemplate: messageTemplate
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: 'User authentication failed' }),
+        { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      )
+    }
+
+    let requestData: BulkSendRequest
+    try {
+      requestData = await req.json()
+    } catch (parseError) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON in request body' }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      )
+    }
+
+    // Validate required fields
+    if (!requestData.name || !requestData.messageTemplate || !requestData.language) {
+      return new Response(
+        JSON.stringify({ error: 'Missing required fields: name, messageTemplate, and language are required' }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      )
+    }
+
+    if (!requestData.contactTags || requestData.contactTags.length === 0) {
+      return new Response(
+        JSON.stringify({ error: 'At least one contact tag must be selected' }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      )
+    }
+
+    const { data: broadcast, error } = await supabase
+      .from('broadcast')
+      .insert([
+        {
+          name: requestData.name,
+          template_name: requestData.messageTemplate,
+          contact_tags: requestData.contactTags,
+          language: requestData.language
+        },
+      ])
+      .select()
+    
+    if (error) {
+      console.error('Error creating broadcast:', error)
+      return new Response(
+        JSON.stringify({ error: 'Failed to create broadcast', details: error.message }),
+        { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      )
+    }
+    
+    if (!broadcast || broadcast.length <= 0) {
+      return new Response(
+        JSON.stringify({ error: `Failed to create broadcast. name: ${requestData.name} template_name: ${requestData.messageTemplate}` }),
+        { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      )
+    }
+    
+    const broadcastId: string = broadcast[0].id
+    console.log(`Broadcast created - ${broadcastId}`)
+    
+    let contactsMarkedForSent
+    try {
+      contactsMarkedForSent = await markContactsForSend(supabase, broadcastId, requestData.contactTags)
+      console.log(`BroadcastId: ${broadcastId} - ${contactsMarkedForSent.scheduledCount} contacts marked for send`)
+      
+      if (contactsMarkedForSent.scheduledCount === 0) {
+        return new Response(
+          JSON.stringify({ 
+            error: 'No contacts found', 
+            details: `No contacts found with the selected tags: ${requestData.contactTags.join(', ')}. Please check your tag selection or add contacts with these tags.`
+          }),
+          { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        )
       }
-    })
-  }
-  console.log(`BroadcastId: ${broadcastId} - ${PARALLEL_BATCH_COUNT} workers invoked`)
+    } catch (markError) {
+      console.error('Error marking contacts for send:', markError)
+      return new Response(
+        JSON.stringify({ error: 'Failed to process contacts', details: markError.message }),
+        { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      )
+    }
 
-  return new Response(
-    '{"success": true}',
-    { headers: { "Content-Type": "application/json", ...corsHeaders } },
-  )
+    const { error: errorUpdateBroadcastSC } = await supabase
+      .from('broadcast')
+      .update({ scheduled_count: contactsMarkedForSent.scheduledCount })
+      .eq('id', broadcastId)
+    
+    if (errorUpdateBroadcastSC) {
+      console.error('Error updating broadcast scheduled count:', errorUpdateBroadcastSC)
+      return new Response(
+        JSON.stringify({ error: 'Failed to update broadcast count', details: errorUpdateBroadcastSC.message }),
+        { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      )
+    }
+
+    let messageTemplate
+    try {
+      messageTemplate = await getMessageTemplate(requestData.messageTemplate, requestData.language)
+    } catch (templateError) {
+      console.error('Error fetching message template:', templateError)
+      return new Response(
+        JSON.stringify({ error: 'Failed to fetch message template', details: templateError.message }),
+        { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      )
+    }
+
+    // Start batch processing workers
+    const workerCount = Math.min(PARALLEL_BATCH_COUNT, contactsMarkedForSent.batches.length)
+    for (let i = 0; i < workerCount; i++) {
+      // Don't await these calls - they should run in background
+      supabase.functions.invoke('send-message-batch', {
+        body: {
+          broadcast: broadcast[0],
+          messageTemplate: messageTemplate
+        }
+      }).catch(workerError => {
+        console.error(`Error invoking worker ${i}:`, workerError)
+      })
+    }
+    console.log(`BroadcastId: ${broadcastId} - ${workerCount} workers invoked`)
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        message: 'Bulk send initiated successfully',
+        broadcastId: broadcastId,
+        contactsScheduled: contactsMarkedForSent.scheduledCount,
+        workersStarted: workerCount
+      }),
+      { headers: { "Content-Type": "application/json", ...corsHeaders } }
+    )
+
+  } catch (error) {
+    console.error('Bulk send function error:', error)
+    return new Response(
+      JSON.stringify({ 
+        error: 'Internal server error', 
+        details: error.message || 'Unknown error occurred'
+      }),
+      { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+    )
+  }
 })
