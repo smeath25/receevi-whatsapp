@@ -16,7 +16,9 @@
       "Bash(supabase migration repair:*)",
       "Bash(npx tsc:*)",
       "Bash(curl:*)",
-      "Bash(pkill:*)"
+      "Bash(pkill:*)",
+      "Bash(supabase functions:*)",
+      "Bash(mkdir:*)"
     ],
     "deny": []
   }
