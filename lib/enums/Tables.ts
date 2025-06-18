@@ -4,4 +4,5 @@ export enum DBTables {
     Messages = 'messages',
     MessageTemplate = 'message_template',
     Setup = 'setup',
+    QuickReplies = 'quick_replies',
 }

@@ -4,8 +4,9 @@ import TWLoader from "@/components/TWLoader";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuShortcut, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import TemplateSelection from "@/components/ui/template-selection";
+import QuickReplySelection from "@/components/ui/quick-reply-selection";
 import { TemplateRequest } from "@/types/message-template-request";
-import { Image as ImageIcon, File as FileIcon, Paperclip, MessageSquareDashed, XCircle, Clock } from "lucide-react";
+import { Image as ImageIcon, File as FileIcon, Paperclip, MessageSquareDashed, MessageSquare, XCircle, Clock } from "lucide-react";
 import { Dispatch, SetStateAction, useCallback, useEffect, useRef, useState } from "react";
 import { ScheduleMessageDialog } from "@/components/scheduling/ScheduleMessageDialog";
 import { ScheduledMessageFormData } from "@/types/scheduled-message";
@@ -44,6 +45,7 @@ export default function SendMessageUI({
     const [fileName, setFileName] = useState<string | undefined>()
     const [showScheduleDialog, setShowScheduleDialog] = useState(false)
     const messageTemplateOpenerButton = useRef<HTMLButtonElement>(null);
+    const quickReplyOpenerButton = useRef<HTMLButtonElement>(null);
 
     useEffect(() => {
         if (!file) {
@@ -100,6 +102,10 @@ export default function SendMessageUI({
         }
     }, [setMessageSendInProgress, onTemplateMessageSend])
 
+    const onQuickReplySelect = useCallback((content: string) => {
+        setMessage(content)
+    }, [setMessage])
+
     return (
         <>
             {(typeof fileType !== 'undefined') && <div className="bg-slate-200 p-4">
@@ -136,6 +142,10 @@ export default function SendMessageUI({
                             <ImageIcon className="mr-2 h-4 w-4" />
                             <span>Photos & videos</span>
                         </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => quickReplyOpenerButton.current?.click()}>
+                            <MessageSquare className="mr-2 h-4 w-4" />
+                            <span>Quick Reply</span>
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => messageTemplateOpenerButton.current?.click()}>
                             <MessageSquareDashed className="mr-2 h-4 w-4" />
                             <span>Template message</span>
@@ -143,6 +153,9 @@ export default function SendMessageUI({
                     </DropdownMenuContent>
 
                 </DropdownMenu>
+                <QuickReplySelection onQuickReplySelect={onQuickReplySelect}>
+                    <Button ref={quickReplyOpenerButton} className="hidden">Open quick reply</Button>
+                </QuickReplySelection>
                 <TemplateSelection onTemplateSubmit={onTemplateSubmit}>
                     <Button ref={messageTemplateOpenerButton} className="hidden">Open message template</Button>
                 </TemplateSelection>

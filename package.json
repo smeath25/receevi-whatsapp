@@ -52,6 +52,7 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@tailwindcss/line-clamp": "^0.4.4",
     "@types/bcrypt": "^5.0.2",
     "autoprefixer": "^10.4.16",
     "postcss": "^8.4.31",

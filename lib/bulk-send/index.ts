@@ -104,18 +104,29 @@ export async function bulkSend(prevState: {message: string}, formData: FormData)
 
         const supabase = createServerClient()
         
-        // Check if user is authenticated
+        // Check if user is authenticated and get session
         const { data: { user }, error: authError } = await supabase.auth.getUser()
         if (authError || !user) {
             console.error('Authentication error:', authError)
             return { message: "Authentication required. Please log in again." }
         }
 
+        // Get the session to access the access token
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+        if (sessionError || !session?.access_token) {
+            console.error('Session error:', sessionError)
+            return { message: "Session expired. Please log in again." }
+        }
+
         console.log('Authenticated user:', user.email)
         console.log('Invoking bulk-send edge function with data:', JSON.stringify(bulkSendRequest, null, 2))
 
+        // Call Edge Function with proper authentication
         const { data, error } = await supabase.functions.invoke('bulk-send', {
-            body: bulkSendRequest
+            body: bulkSendRequest,
+            headers: {
+                Authorization: `Bearer ${session.access_token}`
+            }
         })
         
         console.log('Edge function response:', { data, error })

@@ -5,7 +5,7 @@ import { useSupabaseUser, useUserRole } from "@/components/supabase-user-provide
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuShortcut, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import UserLetterIcon from "@/components/users/UserLetterIcon";
-import { CircleUserRound, ContactIcon, LogOut, MessageCircleIcon, RadioIcon, UserRound, UsersIcon, Clock } from "lucide-react";
+import { CircleUserRound, ContactIcon, LogOut, MessageCircleIcon, MessageSquare, RadioIcon, UserRound, UsersIcon, Clock } from "lucide-react";
 import Link from 'next/link';
 import { usePathname, useRouter } from "next/navigation";
 import { ReactNode, useCallback, useEffect } from "react";
@@ -43,6 +43,7 @@ export default function PanelClient({ children }: { children: ReactNode }) {
                 <div className="flex flex-row items-center">
                     <Link href="/chats"><Button variant={activePath?.startsWith('/chats') ? "secondary" : "ghost"} className="px-4 justify-start"> <MessageCircleIcon />&nbsp;&nbsp;Chats</Button></Link>
                     <Link href="/contacts"><Button variant={activePath?.startsWith('/contacts') ? "secondary" : "ghost"} className="px-4 justify-start ml-2"><ContactIcon />&nbsp;&nbsp;Contacts</Button></Link>
+                    <Link href="/quick-replies"><Button variant={activePath?.startsWith('/quick-replies') ? "secondary" : "ghost"} className="px-4 justify-start ml-2"><MessageSquare />&nbsp;&nbsp;Quick Replies</Button></Link>
                     <Link href="/scheduled-messages"><Button variant={activePath?.startsWith('/scheduled-messages') ? "secondary" : "ghost"} className="px-4 justify-start ml-2"><Clock />&nbsp;&nbsp;Scheduled</Button></Link>
                     {(() => {
                         if (userRole === 'admin') {

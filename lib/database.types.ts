@@ -474,6 +474,47 @@ export type Database = {
           }
         ]
       }
+      quick_replies: {
+        Row: {
+          id: string
+          title: string
+          content: string
+          category: string | null
+          created_by: string
+          is_global: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          title: string
+          content: string
+          category?: string | null
+          created_by: string
+          is_global?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          title?: string
+          content?: string
+          category?: string | null
+          created_by?: string
+          is_global?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quick_replies_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       webhook: {
         Row: {
           created_at: string | null
