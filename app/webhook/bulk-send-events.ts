@@ -94,7 +94,10 @@ export async function updateBroadCastReplyStatus(messages: WebhookMessage[]) {
         } else {
           const { error: broadcastContactUpdateError } = await supabase
             .from('broadcast_contact')
-            .update({ reply_counted: true })
+            .update({ 
+              reply_counted: true,
+              replied_at: new Date(Number.parseInt(message.timestamp) * 1000).toISOString()
+            })
             .eq('id', singleContact.id)
           if (broadcastContactUpdateError) {
             console.error(`Error while updating singleContact.id: ${singleContact.id}, message.id: ${message.id}`, broadcastContactUpdateError)

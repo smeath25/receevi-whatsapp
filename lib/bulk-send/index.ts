@@ -11,6 +11,8 @@ const schema = z.object({
     message_template: z.string().min(1, "Message template is required"),
     language: z.string().min(1, "Language is required"),
     contact_tags: z.string().optional().default("[]"),
+    is_scheduled: z.string().optional().default("false"),
+    scheduled_at: z.string().optional().default(""),
 });
 
 type BulkSendRequest = {
@@ -18,6 +20,8 @@ type BulkSendRequest = {
     messageTemplate: string,
     language: string,
     contactTags: string[],
+    isScheduled?: boolean,
+    scheduledAt?: string,
 }
 
 export async function getTemplateLanguges(templateName: string): Promise<string[]> {
@@ -71,6 +75,8 @@ export async function bulkSend(prevState: {message: string}, formData: FormData)
             message_template: formData.get('message_template'),
             contact_tags: formData.get('contact_tags'),
             language: formData.get('language'),
+            is_scheduled: formData.get('is_scheduled'),
+            scheduled_at: formData.get('scheduled_at'),
         });
 
         // Validate and parse contact tags
@@ -88,11 +94,29 @@ export async function bulkSend(prevState: {message: string}, formData: FormData)
             }
         }
 
+        // Parse scheduling parameters
+        const isScheduled = parsed.is_scheduled === 'true'
+        let scheduledAt: string | undefined
+        
+        if (isScheduled && parsed.scheduled_at) {
+            // Validate the scheduled date
+            const scheduledDate = new Date(parsed.scheduled_at)
+            if (isNaN(scheduledDate.getTime())) {
+                return { message: "Invalid scheduled date format" }
+            }
+            if (scheduledDate <= new Date()) {
+                return { message: "Scheduled date must be in the future" }
+            }
+            scheduledAt = scheduledDate.toISOString()
+        }
+
         const bulkSendRequest: BulkSendRequest = {
             name: parsed.broadcast_name,
             messageTemplate: parsed.message_template,
             language: parsed.language,
-            contactTags: contactTags
+            contactTags: contactTags,
+            isScheduled,
+            scheduledAt
         }
 
         console.log('Bulk send request:', bulkSendRequest)
@@ -156,8 +180,16 @@ export async function bulkSend(prevState: {message: string}, formData: FormData)
 
         console.log('Bulk send successful, response data:', data)
         
-        revalidatePath('/bulk-send', 'page');
-        redirect('/bulk-send');
+        // Redirect based on whether campaign was scheduled or sent immediately
+        if (data && data.scheduled) {
+            // For scheduled campaigns, redirect to scheduled campaigns page
+            revalidatePath('/scheduled-campaigns', 'page');
+            redirect('/scheduled-campaigns');
+        } else {
+            // For immediate campaigns, redirect to bulk-send page
+            revalidatePath('/bulk-send', 'page');
+            redirect('/bulk-send');
+        }
     } catch (error) {
         console.error('Bulk send error:', error)
         if (error instanceof Error) {

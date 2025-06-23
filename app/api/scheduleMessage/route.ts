@@ -5,6 +5,8 @@ import ScheduledMessageServerFactory from "@/lib/repositories/scheduled-messages
 import { CreateScheduledMessageRequest, ScheduledMessageType } from "@/types/scheduled-message"
 import { TemplateRequest } from "@/types/message-template-request"
 
+export const dynamic = 'force-dynamic'
+
 export async function POST(request: NextRequest) {
     try {
         // Authenticate user

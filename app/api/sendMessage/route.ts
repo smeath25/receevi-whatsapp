@@ -225,6 +225,8 @@ async function sendWhatsAppMessage(to: string, message: string | null | undefine
     console.log(supabaseResponse)
 }
 
+export const dynamic = 'force-dynamic'
+
 export async function POST(request: NextRequest) {
     const supabase = createClient()
     const {

@@ -3,6 +3,8 @@ import { createClient } from "@/utils/supabase-server";
 import QuickReplyServerFactory from "@/lib/repositories/quick-replies/QuickReplyServerFactory";
 import { UpdateQuickReplyRequest } from "@/types/quick-reply";
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(
     request: NextRequest,
     { params }: { params: { id: string } }

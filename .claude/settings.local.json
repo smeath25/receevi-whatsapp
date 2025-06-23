@@ -18,7 +18,13 @@
       "Bash(curl:*)",
       "Bash(pkill:*)",
       "Bash(supabase functions:*)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "WebFetch(domain:docs.anthropic.com)",
+      "Bash(supabase migration:*)",
+      "Bash(sudo chown:*)",
+      "Bash(npx @supabase/mcp-server-supabase:*)",
+      "Bash(node:*)",
+      "Bash(sed:*)"
     ],
     "deny": []
   }

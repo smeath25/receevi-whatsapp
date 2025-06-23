@@ -1,9 +1,30 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { Response } from "https://esm.sh/v133/@supabase/node-fetch@2.6.14/denonext/node-fetch.mjs";
-import { SupabaseClientType, createSupabaseClient } from "../_shared/client.ts";
-import { PARALLEL_BATCH_COUNT, PROCESSING_LIMIT } from "../_shared/constants.ts";
-import { corsHeaders } from '../_shared/cors.ts';
-import { getMessageTemplate } from "./get-message-template.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
+// CORS headers
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
+// Constants
+const PROCESSING_LIMIT = 1000
+const PARALLEL_BATCH_COUNT = 3
+
+// Create Supabase client
+function createSupabaseClient(authorizationHeader: string) {
+  return createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+    {
+      global: {
+        headers: {
+          Authorization: authorizationHeader
+        }
+      }
+    }
+  )
+}
 
 type BulkSendRequest = {
   name: string,
@@ -14,21 +35,59 @@ type BulkSendRequest = {
   scheduledAt?: string,
 }
 
-async function markContactsForSend(supabase: SupabaseClientType, broadcastId: string, tags: string[]) {
+async function getMessageTemplate(templateName: string, language: string) {
+  const whatsappBusinessAccountId = Deno.env.get('WHATSAPP_BUSINESS_ACCOUNT_ID')
+  const whatsappAccessToken = Deno.env.get('WHATSAPP_ACCESS_TOKEN')
+  
+  if (!whatsappBusinessAccountId || !whatsappAccessToken) {
+    throw new Error('WhatsApp configuration missing')
+  }
+
+  const response = await fetch(
+    `https://graph.facebook.com/v17.0/${whatsappBusinessAccountId}/message_templates?name=${encodeURIComponent(templateName)}&status=APPROVED`,
+    {
+      headers: {
+        'Authorization': `Bearer ${whatsappAccessToken}`
+      }
+    }
+  )
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch message template: ${response.status}`)
+  }
+
+  const data = await response.json()
+  const template = data.data.find((t: any) => 
+    t.name === templateName && 
+    t.language === language && 
+    t.status === 'APPROVED'
+  )
+  
+  if (!template) {
+    throw new Error(`Template not found: ${templateName} (${language})`)
+  }
+  
+  return template
+}
+
+async function markContactsForSend(supabase: any, broadcastId: string, tags: string[]) {
   let from = 0
   let lastFetchedCount;
   let scheduledCount = 0;
   const batches = []
+  
   do {
     const batchId = crypto.randomUUID()
     const to = from + PROCESSING_LIMIT - 1
     console.log(`BroadcastId: ${broadcastId} - Analyzing contacts to send message ${from} ${to}...`)
+    
     const { data: contacts, error } = await supabase
       .from('contacts')
       .select('*')
       .order('created_at', { ascending: true })
       .overlaps('tags', tags)
       .range(from, to)
+    
     if (error) throw error
     
     if (!contacts || contacts.length === 0) {
@@ -36,7 +95,7 @@ async function markContactsForSend(supabase: SupabaseClientType, broadcastId: st
       break
     }
     
-    const broadcastContacts = contacts.map((item) => {
+    const broadcastContacts = contacts.map((item: any) => {
       return {
         broadcast_id: broadcastId,
         contact_id: item.wa_id,
@@ -50,22 +109,28 @@ async function markContactsForSend(supabase: SupabaseClientType, broadcastId: st
     if (errorContactInsert) throw errorContactInsert
     
     batches.push(batchId)
-    const { error: errorBatchInsert } = await supabase.from('broadcast_batch').insert({
-      'id': batchId,
-      'broadcast_id': broadcastId,
-      'scheduled_count': contacts.length,
-    })
+    
+    const { error: errorBatchInsert } = await supabase
+      .from('broadcast_batch')
+      .insert([{
+        id: batchId,
+        broadcast_id: broadcastId,
+        scheduled_count: contacts.length
+      }])
     if (errorBatchInsert) throw errorBatchInsert
-    lastFetchedCount = contacts.length
+    
     scheduledCount += contacts.length
-    from = from + PROCESSING_LIMIT
-  } while (lastFetchedCount == PROCESSING_LIMIT)
+    lastFetchedCount = contacts.length
+    from = to + 1
+  } while (lastFetchedCount === PROCESSING_LIMIT)
+  
   return { scheduledCount, batches }
 }
 
-serve(async (req) => {
+serve(async (req: Request) => {
   console.log('Bulk-send function invoked, method:', req.method)
   
+  // Handle CORS
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
@@ -128,6 +193,8 @@ serve(async (req) => {
       ? requestData.scheduledAt 
       : null
 
+    console.log(`Creating broadcast with status: ${status}, scheduled_at: ${scheduled_at}`)
+
     const { data: broadcast, error } = await supabase
       .from('broadcast')
       .insert([
@@ -160,16 +227,51 @@ serve(async (req) => {
     const broadcastId: string = broadcast[0].id
     console.log(`Broadcast created - ${broadcastId} (Status: ${status})`)
     
-    // For scheduled campaigns, just create the broadcast record and return
+    // For scheduled campaigns, populate the recipient list but don't send yet
     if (requestData.isScheduled) {
       console.log(`Campaign scheduled for: ${requestData.scheduledAt}`)
+      
+      let contactsMarkedForScheduling
+      try {
+        contactsMarkedForScheduling = await markContactsForSend(supabase, broadcastId, requestData.contactTags)
+        console.log(`BroadcastId: ${broadcastId} - ${contactsMarkedForScheduling.scheduledCount} contacts marked for scheduled send`)
+        
+        if (contactsMarkedForScheduling.scheduledCount === 0) {
+          return new Response(
+            JSON.stringify({ 
+              error: 'No contacts found', 
+              details: `No contacts found with the selected tags: ${requestData.contactTags.join(', ')}. Please check your tag selection or add contacts with these tags.`
+            }),
+            { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+          )
+        }
+        
+        // Update the broadcast with scheduled count
+        const { error: errorUpdateBroadcastSC } = await supabase
+          .from('broadcast')
+          .update({ scheduled_count: contactsMarkedForScheduling.scheduledCount })
+          .eq('id', broadcastId)
+        
+        if (errorUpdateBroadcastSC) {
+          console.error('Error updating broadcast scheduled count:', errorUpdateBroadcastSC)
+        }
+        
+      } catch (markError) {
+        console.error('Error marking contacts for scheduled send:', markError)
+        return new Response(
+          JSON.stringify({ error: 'Failed to process contacts for scheduling', details: markError.message }),
+          { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        )
+      }
+      
       return new Response(
         JSON.stringify({ 
           success: true, 
           broadcastId,
           message: `Campaign "${requestData.name}" has been scheduled for ${new Date(requestData.scheduledAt!).toLocaleString()}`,
           scheduled: true,
-          scheduledAt: requestData.scheduledAt
+          scheduledAt: requestData.scheduledAt,
+          contactsScheduled: contactsMarkedForScheduling.scheduledCount
         }),
         { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
       )
@@ -231,7 +333,7 @@ serve(async (req) => {
           broadcast: broadcast[0],
           messageTemplate: messageTemplate
         }
-      }).catch(workerError => {
+      }).catch((workerError: any) => {
         console.error(`Error invoking worker ${i}:`, workerError)
       })
     }

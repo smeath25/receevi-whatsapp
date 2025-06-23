@@ -46,8 +46,10 @@ export type Database = {
           processed_count: number
           read_count: number
           replied_count: number
+          scheduled_at: string | null
           scheduled_count: number | null
           sent_count: number
+          status: string
           template_name: string
         }
         Insert: {
@@ -61,8 +63,10 @@ export type Database = {
           processed_count?: number
           read_count?: number
           replied_count?: number
+          scheduled_at?: string | null
           scheduled_count?: number | null
           sent_count?: number
+          status?: string
           template_name: string
         }
         Update: {
@@ -76,8 +80,10 @@ export type Database = {
           processed_count?: number
           read_count?: number
           replied_count?: number
+          scheduled_at?: string | null
           scheduled_count?: number | null
           sent_count?: number
+          status?: string
           template_name?: string
         }
         Relationships: []
