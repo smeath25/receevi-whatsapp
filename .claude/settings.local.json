@@ -24,7 +24,9 @@
       "Bash(sudo chown:*)",
       "Bash(npx @supabase/mcp-server-supabase:*)",
       "Bash(node:*)",
-      "Bash(sed:*)"
+      "Bash(sed:*)",
+      "Bash(supabase:*)",
+      "Bash(ls:*)"
     ],
     "deny": []
   }

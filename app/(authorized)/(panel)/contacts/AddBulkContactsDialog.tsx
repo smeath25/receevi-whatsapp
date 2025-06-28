@@ -68,7 +68,7 @@ export function AddBulkContactsDialog({ children, onSuccessfulAdd }: { children:
                 throw new Error('No file selected')
             }
             
-            const csvData = await bulkfile.text()
+            let csvData = await bulkfile.text()
             
             // Basic CSV validation
             const lines = csvData.trim().split('\n')
@@ -76,25 +76,106 @@ export function AddBulkContactsDialog({ children, onSuccessfulAdd }: { children:
                 throw new Error('CSV must contain at least a header row and one data row')
             }
             
+            // Clean phone numbers in the CSV data before sending
+            const cleanedLines = lines.map((line: string, index: number) => {
+                if (index === 0) return line // Skip header row
+                
+                const columns = line.split(',')
+                if (columns.length >= 2) {
+                    // Clean the phone number (second column)
+                    columns[1] = columns[1]
+                        .trim()
+                        .replace(/\s+/g, '')      // Remove all spaces
+                        .replace(/-/g, '')        // Remove hyphens
+                        .replace(/\(/g, '')       // Remove opening parentheses
+                        .replace(/\)/g, '')       // Remove closing parentheses
+                        .replace(/\./g, '')       // Remove dots
+                }
+                return columns.join(',')
+            })
+            
+            // Use cleaned CSV data
+            csvData = cleanedLines.join('\n')
+            
+            console.log('Sending cleaned CSV data (first 5 lines):', cleanedLines.slice(0, 5).join('\n'))
+            
             const res = await supabase.functions.invoke("insert-bulk-contacts", {
                 body: csvData,
             });
             
+            // Log the full response for debugging
+            console.log('Full Edge Function response:', {
+                data: res.data,
+                error: res.error,
+                errorMessage: res.error?.message,
+                status: res.error?.status,
+            })
+            
             if (res.error) {
                 console.error('Error while sending bulk csv', res.error)
-                throw new Error(res.error.message || 'Failed to import contacts')
+                console.error('Response data:', res.data)
+                
+                // Check if the error contains actual response data
+                let errorMessage = 'Failed to import contacts'
+                let errorDetails = ''
+                
+                // First, check if res.data contains error information
+                if (res.data && typeof res.data === 'object') {
+                    if (res.data.error) {
+                        errorMessage = res.data.error
+                        if (res.data.details) {
+                            errorDetails = res.data.details
+                        }
+                    } else if (res.data.message) {
+                        errorMessage = res.data.message
+                    }
+                }
+                
+                // If we still have the generic message, try to parse the error
+                if (errorMessage === 'Failed to import contacts' && res.error.message) {
+                    // Try to parse the error message if it's JSON
+                    try {
+                        const errorData = JSON.parse(res.error.message)
+                        errorMessage = errorData.error || errorData.message || res.error.message
+                        if (errorData.details) {
+                            errorDetails = errorData.details
+                        }
+                    } catch (parseError) {
+                        console.error('Failed to parse error message:', parseError)
+                        // If parsing fails, use the raw message
+                        errorMessage = res.error.message
+                    }
+                }
+                
+                // Combine message and details
+                const finalErrorMessage = errorDetails 
+                    ? `${errorMessage}: ${errorDetails}`
+                    : errorMessage
+                
+                console.error('Final error message:', finalErrorMessage)
+                throw new Error(finalErrorMessage)
             }
             
             // Parse response for stats
             const responseData = res.data
             if (responseData && typeof responseData === 'object') {
                 setImportStats({
-                    contacts: responseData.contacts_processed || lines.length - 1,
+                    contacts: responseData.contacts_processed || 0,
                     tags: responseData.tags_created || 0
                 })
-                setSuccessMessage(`Successfully imported contacts! ${lines.length - 1} contacts processed.`)
+                
+                // Build detailed success message
+                let message = `Successfully imported ${responseData.contacts_processed || 0} contacts!`
+                if (responseData.duplicates_skipped > 0) {
+                    message += ` (${responseData.duplicates_skipped} duplicates skipped)`
+                }
+                if (responseData.invalid_numbers_skipped > 0) {
+                    message += ` (${responseData.invalid_numbers_skipped} invalid numbers skipped)`
+                }
+                
+                setSuccessMessage(message)
             } else {
-                setSuccessMessage(`Successfully imported ${lines.length - 1} contacts!`)
+                setSuccessMessage(`Successfully imported contacts!`)
             }
             
             // Trigger success callback and close dialog after showing success message
@@ -108,7 +189,16 @@ export function AddBulkContactsDialog({ children, onSuccessfulAdd }: { children:
             
         } catch (error) {
             console.error('Import error:', error)
-            setErrorMessage(error instanceof Error ? error.message : 'Something went wrong during import')
+            // Show more detailed error for debugging
+            if (error instanceof Error) {
+                setErrorMessage(error.message)
+                // Also show a hint about checking the browser console
+                if (error.message.includes('Upload failed')) {
+                    setErrorMessage(error.message + ' (Check browser console for details)')
+                }
+            } else {
+                setErrorMessage('Something went wrong during import')
+            }
         } finally {
             setLoading(false)
         }

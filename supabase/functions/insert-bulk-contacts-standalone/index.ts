@@ -1,24 +1,36 @@
-// Follow this setup guide to integrate the Deno language server with your editor:
-// https://deno.land/manual/getting_started/setup_your_environment
-// This enables autocomplete, go to definition, etc.
+// Standalone version of insert-bulk-contacts to avoid import issues
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { parse } from "https://deno.land/std@0.218.2/csv/mod.ts"
 
-// Define CORS headers inline to avoid import issues
+// Define CORS headers inline
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-import { parse } from "https://deno.land/std@0.218.2/csv/mod.ts";
-import { createSupabaseClient } from "../_shared/client.ts";
-import { Database } from "../_shared/database.types.ts";
+// Type definitions
+type ContactTag = {
+  name: string
+}
 
-export type ContactTag = Database['public']['Tables']['contact_tag']['Insert']
-export type Contact = Database['public']['Tables']['contacts']['Insert']
+type Contact = {
+  profile_name: string
+  wa_id: string
+  tags: string[] | null
+}
 
 type CSVData = {
-  name: string,
-  number: string,
+  name: string
+  number: string
   tags: string
+}
+
+function createSupabaseClient(authorizationHeader: string) {
+    return createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+        { global: { headers: { Authorization: authorizationHeader } } }
+    )
 }
 
 Deno.serve(async (req) => {
@@ -61,8 +73,8 @@ Deno.serve(async (req) => {
         skipFirstRow: true,
         strip: true,
         columns: ["name", "number", "tags"],
-      })
-    } catch (parseError) {
+      }) as CSVData[]
+    } catch (parseError: any) {
       return new Response(
         JSON.stringify({ error: 'Invalid CSV format', details: parseError.message }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
@@ -192,7 +204,7 @@ Deno.serve(async (req) => {
       { headers: { "Content-Type": "application/json", ...corsHeaders } }
     )
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Import function error:', error)
     return new Response(
       JSON.stringify({ 
@@ -203,9 +215,3 @@ Deno.serve(async (req) => {
     )
   }
 })
-
-// To invoke:
-// curl -i --location --request POST 'http://127.0.0.1:54321/functions/v1/' \
-//   --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0' \
-//   --header 'Content-Type: application/json' \
-//   --data '{"name":"Functions"}'
